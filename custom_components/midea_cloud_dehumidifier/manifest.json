@@ -1,16 +1,18 @@
 {
   "domain": "midea_cloud_dehumidifier",
   "name": "Midea Dehumidifier (Cloud)",
-  "version": "0.3.0",
+  "codeowners": [
+    "@zorxd"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/zorxd/midea-dehumidifier-homeassistant",
-  "issue_tracker": "https://github.com/zorxd/midea-dehumidifier-homeassistant/issues",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/zorxd/midea-dehumidifier-homeassistant/issues",
   "loggers": [
     "midea_beautiful"
   ],
   "requirements": [
     "midea-beautiful-air==0.10.7"
   ],
-  "codeowners": ["@zorxd"]
+  "version": "0.3.0"
 }
