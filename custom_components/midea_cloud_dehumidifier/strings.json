@@ -1,0 +1,98 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to the Midea cloud",
+        "description": "Sign in with the account you use in the Midea app. A separate account with the dehumidifier shared to it works best.",
+        "data": {
+          "account": "E-mail",
+          "password": "Password",
+          "app": "Midea app",
+          "scan_interval": "Scan interval (seconds)"
+        }
+      },
+      "appliance": {
+        "title": "Choose a dehumidifier",
+        "description": "This account has several dehumidifiers. Choose the one to add; add the others by setting up the integration again.",
+        "data": {
+          "appliance_id": "Dehumidifier"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Midea cloud",
+      "invalid_auth": "The Midea cloud rejected the e-mail or password",
+      "no_dehumidifiers": "No dehumidifier was found on this account",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This dehumidifier is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Midea Dehumidifier options",
+        "description": "Update the account password and polling settings.",
+        "data": {
+          "password": "Password",
+          "scan_interval": "Scan interval (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "set": "Set",
+              "continuous": "Continuous",
+              "smart": "Smart",
+              "dry_clothes": "Dry clothes"
+            }
+          }
+        }
+      }
+    },
+    "select": {
+      "fan_speed": {
+        "name": "Fan speed",
+        "state": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      }
+    },
+    "sensor": {
+      "current_humidity": {
+        "name": "Humidity"
+      },
+      "current_temperature": {
+        "name": "Temperature"
+      },
+      "tank_level": {
+        "name": "Water level"
+      },
+      "error_code": {
+        "name": "Error code"
+      }
+    },
+    "binary_sensor": {
+      "tank_full": {
+        "name": "Tank full"
+      },
+      "filter_indicator": {
+        "name": "Filter needs cleaning"
+      },
+      "defrosting": {
+        "name": "Defrosting"
+      },
+      "error": {
+        "name": "Error"
+      }
+    }
+  }
+}

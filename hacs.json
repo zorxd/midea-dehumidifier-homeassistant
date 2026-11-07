@@ -1,0 +1,8 @@
+{
+  "name": "Midea Dehumidifier (Cloud)",
+  "content_in_root": false,
+  "domains": [
+    "midea_cloud_dehumidifier"
+  ],
+  "homeassistant": "2025.1.0"
+}
