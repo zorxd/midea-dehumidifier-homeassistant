@@ -15,8 +15,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Until the icon is in the home-assistant/brands repository
-          ignore: brands
 
   hassfest:
     name: Hassfest
