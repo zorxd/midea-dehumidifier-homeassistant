@@ -21,6 +21,9 @@ from .entity import MideaCoordinatorEntity
 
 MODE_IDS = {name: mode for mode, name in MODES.items()}
 
+# Modes offered only when the appliance reports the matching capability
+MODE_CAPABILITIES = {"smart": "auto", "dry_clothes": "dry_clothes"}
+
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -51,7 +54,7 @@ class MideaDehumidifier(MideaCoordinatorEntity, HumidifierEntity):
         return [
             name
             for name in MODES.values()
-            if name != "dry_clothes" or self.supports("dry_clothes")
+            if name not in MODE_CAPABILITIES or self.supports(MODE_CAPABILITIES[name])
         ]
 
     @property

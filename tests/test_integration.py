@@ -167,10 +167,10 @@ async def test_entities_show_state(hass: HomeAssistant) -> None:
     assert dehumidifier.attributes["humidity"] == 50
     assert dehumidifier.attributes["current_humidity"] == 52
     assert dehumidifier.attributes["mode"] == "set"
+    # The Cube doesn't report "auto", so it has no Smart mode
     assert dehumidifier.attributes["available_modes"] == [
         "set",
         "continuous",
-        "smart",
         "dry_clothes",
     ]
     assert hass.states.get("select.deshumidificateur_fan_speed").state == "low"
@@ -473,3 +473,15 @@ def test_translations_have_the_same_keys() -> None:
     english = keys(json.loads((folder / "en.json").read_text(encoding="utf-8")))
     for path in folder.glob("*.json"):
         assert keys(json.loads(path.read_text(encoding="utf-8"))) == english, path.name
+
+
+async def test_smart_mode_needs_auto_capability(hass: HomeAssistant) -> None:
+    """Models that report the "auto" capability also get the Smart mode."""
+    capabilities = {**STATE["capabilities"], "auto": 1}
+    with patch(
+        f"{CLIENT}.refresh", return_value={**STATE, "capabilities": capabilities}
+    ):
+        await _setup(hass)
+
+    modes = hass.states.get("humidifier.deshumidificateur").attributes["available_modes"]
+    assert modes == ["set", "continuous", "smart", "dry_clothes"]
