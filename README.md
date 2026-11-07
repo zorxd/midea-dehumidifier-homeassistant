@@ -61,4 +61,6 @@ A future change to the Midea cloud could stop the integration from working.
 
 ## License
 
+Copyright (C) 2026 Xavier Douville
+
 This integration is licensed under the [GNU General Public License v3.0](LICENSE). It is not affiliated with or endorsed by Midea.
