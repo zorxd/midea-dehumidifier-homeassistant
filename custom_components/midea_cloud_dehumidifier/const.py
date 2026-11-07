@@ -4,7 +4,7 @@ from __future__ import annotations
 
 DOMAIN = "midea_cloud_dehumidifier"
 DEFAULT_NAME = "Midea Dehumidifier"
-DEFAULT_SCAN_INTERVAL = 60
+DEFAULT_SCAN_INTERVAL = 300
 DEFAULT_APP = "MSmartHome"
 
 CONF_ACCOUNT = "account"

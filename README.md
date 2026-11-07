@@ -43,7 +43,7 @@ After changing the password in the Midea app, enter the new one under **Configur
 
 ## Polling
 
-The integration polls the cloud every 60 seconds by default. You can change this under **Configure**. Polling much more often puts load on Midea's servers for little benefit.
+The integration polls the cloud every 5 minutes by default, which is plenty for humidity, since it changes slowly. You can change this under **Configure**. Changes you make from Home Assistant apply immediately, whatever the interval. Polling much more often puts load on Midea's servers for little benefit.
 
 ## How it works
 
