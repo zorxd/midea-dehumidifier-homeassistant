@@ -33,13 +33,18 @@ Create a second account in the Midea app and share the dehumidifier to it from y
 
 ## Password storage
 
-The integration doesn't store your password. At setup it logs in once, then keeps only the two password hashes the Midea cloud checks at login. These hashes are salted with the account's login ID, so they can't be looked up in precomputed tables, and the password can't be read back from them.
+The integration doesn't store your password. The Midea login sends hashes of the password combined with a login ID that the cloud issues fresh for every login, so the integration stores only the parts that depend on the password: its SHA-256 hash and its double MD5 hash. At each login it combines them with the new login ID, exactly as the Midea app does with the password.
 
-The hashes still let anyone who has them log in to that Midea account, just like the password would, and a weak password could be guessed from them. Protect the account with a long, unique password; the separate account described above limits what a leak would expose.
+These stored hashes have limits:
+
+- They let anyone who has them log in to that Midea account, just like the password would.
+- They aren't salted, because the Midea login format leaves no room for a salt, so a weak password could be recovered from them with precomputed tables. A long, random password can't.
+
+Protect the account with a long, unique password; the separate account described above limits what a leak would expose.
 
 The password must contain only plain ASCII characters (no accents or emoji), because that is all the Midea login hashing supports.
 
-After changing the password in the Midea app, enter the new one under **Configure**. Entries set up with version 0.1.0, which stored the password, switch to hashes automatically the next time Home Assistant starts.
+After changing the password in the Midea app, enter the new one under **Configure**. Entries set up with version 0.1.0, which stored the password, switch to hashes automatically the next time Home Assistant starts. Entries set up with version 0.2.0 or 0.2.1 stored hashes that only worked once: enter the password again under **Configure**.
 
 ## Polling
 

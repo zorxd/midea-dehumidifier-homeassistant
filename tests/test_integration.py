@@ -11,7 +11,9 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.midea_cloud_dehumidifier.api import (
     MideaApiAuthError,
+    MideaDehumidifierClient,
     _MideaCloud,
+    password_credentials,
 )
 from custom_components.midea_cloud_dehumidifier.const import DOMAIN
 
@@ -34,9 +36,8 @@ STATE = {
 }
 
 CREDENTIALS = {
-    "login_id": "login",
-    "password_hash": "hash",
-    "iam_password_hash": "iamhash",
+    "password_sha256": "sha",
+    "password_md5_md5": "md5md5",
 }
 
 ONE_APPLIANCE = [{"id": "1506", "name": "Déshumidificateur", "model": "41377"}]
@@ -290,7 +291,7 @@ async def test_options_new_password_replaces_hashes(hass: HomeAssistant) -> None
     with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
         entry = await _setup(hass)
 
-    new_credentials = {**CREDENTIALS, "password_hash": "newhash"}
+    new_credentials = {**CREDENTIALS, "password_sha256": "newsha"}
 
     def list_dehumidifiers(self):
         assert self.password == "new-secret"
@@ -330,38 +331,41 @@ async def test_options_wrong_password_keeps_hashes(hass: HomeAssistant) -> None:
 
 
 def test_credentials_match_library_hashes() -> None:
-    """Stored hashes are exactly what the library would send for the password."""
-    cloud = _MideaCloud(appkey="key", account="a", password="secret")
-    cloud._login_id = "login"
-    expected_password = cloud._security.encrypt_password("login", "secret")
-    expected_iam = cloud._security.encrypt_iam_password("login", "secret")
+    """Stored hashes give the library's login hashes for any login ID.
 
-    credentials = cloud.credentials("secret")
-    assert credentials == {
-        "login_id": "login",
-        "password_hash": expected_password,
-        "iam_password_hash": expected_iam,
-    }
+    The cloud issues a new login ID for every login, so this must hold for
+    login IDs other than the one at setup.
+    """
+    credentials = password_credentials("secret")
     assert "secret" not in credentials.values()
 
-    # A client without the password sends the stored hashes
-    other = _MideaCloud(appkey="key", account="a", password="")
-    other.use_credentials(credentials)
-    assert other._security.encrypt_password("login", "") == expected_password
-    assert other._security.encrypt_iam_password("login", "") == expected_iam
+    with_password = _MideaCloud(appkey="key", account="a", password="secret")
+    with_hashes = _MideaCloud(appkey="key", account="a", password="")
+    with_hashes.use_credentials(credentials)
+
+    for login_id in ("first-login", "second-login"):
+        assert with_hashes._security.encrypt_password(
+            login_id, ""
+        ) == with_password._security.encrypt_password(login_id, "secret")
+        assert with_hashes._security.encrypt_iam_password(
+            login_id, ""
+        ) == with_password._security.encrypt_iam_password(login_id, "secret")
 
 
-def test_changed_login_id_needs_password() -> None:
-    """Hashes made for another login ID are refused before logging in."""
-    cloud = _MideaCloud(appkey="key", account="a", password="")
-    cloud.use_credentials({**CREDENTIALS, "login_id": "old"})
-
-    def fake_get_login_id(self):
-        self._login_id = "new"
-
-    with patch("midea_beautiful.cloud.MideaCloud._get_login_id", fake_get_login_id):
-        with pytest.raises(MideaApiAuthError):
-            cloud._get_login_id()
+def test_old_credentials_ask_for_password() -> None:
+    """Version 0.2 stored one-time hashes; they lead to a clear login error."""
+    client = MideaDehumidifierClient(
+        account="a",
+        app="MSmartHome",
+        device_id="0123456789abcdef",
+        push_token="token",
+        appliance_id="1506",
+        credentials={"login_id": "x", "password_hash": "y", "iam_password_hash": "z"},
+    )
+    with patch("midea_beautiful.cloud.MideaCloud.authenticate") as authenticate:
+        with pytest.raises(MideaApiAuthError, match="Configure"):
+            client.refresh()
+    authenticate.assert_not_called()
 
 
 def test_transparent_send_body_has_only_accepted_fields() -> None:

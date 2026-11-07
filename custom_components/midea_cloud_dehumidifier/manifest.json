@@ -1,7 +1,7 @@
 {
   "domain": "midea_cloud_dehumidifier",
   "name": "Midea Dehumidifier (Cloud)",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "config_flow": true,
   "documentation": "https://github.com/zorxd/midea-dehumidifier-homeassistant",
   "issue_tracker": "https://github.com/zorxd/midea-dehumidifier-homeassistant/issues",

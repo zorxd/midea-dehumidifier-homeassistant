@@ -8,6 +8,7 @@ works around changes to the Midea cloud that it predates.
 from __future__ import annotations
 
 from datetime import datetime
+from hashlib import md5, sha256
 from secrets import token_hex, token_urlsafe
 from threading import Lock
 from typing import Any
@@ -32,6 +33,20 @@ class MideaApiAuthError(MideaApiError):
     """Raised when the cloud rejects the account or password."""
 
 
+def password_credentials(password: str) -> dict[str, str]:
+    """Return the password hashes to store instead of the password.
+
+    These are the parts of the Midea login hashes that depend only on the
+    password. The cloud's format leaves no room for a salt of our own.
+    """
+    return {
+        "password_sha256": sha256(password.encode("ascii")).hexdigest(),
+        "password_md5_md5": md5(
+            md5(password.encode("ascii")).hexdigest().encode("ascii")
+        ).hexdigest(),
+    }
+
+
 def new_device_identity() -> tuple[str, str]:
     """Return a new random device ID and push token for logging in.
 
@@ -44,39 +59,28 @@ def new_device_identity() -> tuple[str, str]:
 class _MideaCloud(MideaCloud):
     """Midea cloud client that sends commands the way the cloud now expects."""
 
-    _credentials: dict[str, str] | None = None
-
     def use_credentials(self, credentials: dict[str, str]) -> None:
         """Log in with stored password hashes instead of the password.
 
-        The cloud only ever receives these hashes, which depend on the login
-        ID and the password, so they can stand in for the password.
+        The cloud receives hash(login ID + password hash + app key), with a new
+        login ID for every login, so only the inner password hashes are stored.
         """
-        self._credentials = credentials
-        self._security.encrypt_password = lambda login_id, password: credentials[
-            "password_hash"
-        ]
-        self._security.encrypt_iam_password = lambda login_id, password: credentials[
-            "iam_password_hash"
-        ]
-
-    def credentials(self, password: str) -> dict[str, str]:
-        """Return the password hashes to store; call after logging in."""
-        return {
-            "login_id": self._login_id,
-            "password_hash": self._security.encrypt_password(self._login_id, password),
-            "iam_password_hash": self._security.encrypt_iam_password(
-                self._login_id, password
-            ),
-        }
-
-    def _get_login_id(self) -> None:
-        super()._get_login_id()
-        # The stored hashes are only valid for the login ID they were made with
-        if self._credentials and self._credentials["login_id"] != self._login_id:
+        if not {"password_sha256", "password_md5_md5"} <= credentials.keys():
+            # Version 0.2 stored the outer hashes, which only work once
             raise MideaApiAuthError(
-                "The account's login ID changed; enter the password again"
+                "The stored login no longer works; enter the password under Configure"
             )
+        appkey = self._security._appkey
+
+        def outer(login_id: str, inner: str) -> str:
+            return sha256((login_id + inner + appkey).encode("ascii")).hexdigest()
+
+        self._security.encrypt_password = lambda login_id, password: outer(
+            login_id, credentials["password_sha256"]
+        )
+        self._security.encrypt_iam_password = lambda login_id, password: outer(
+            login_id, credentials["password_md5_md5"]
+        )
 
     def api_request(self, endpoint, args=None, *rest, **kwargs):
         # The cloud rejects unknown fields in transparent/send: it wants
@@ -152,7 +156,7 @@ class MideaDehumidifierClient:
                 cloud.use_credentials(self.credentials)
             cloud.authenticate()
             if self.password is not None:
-                self.credentials = cloud.credentials(self.password)
+                self.credentials = password_credentials(self.password)
                 self.password = None
                 cloud.use_credentials(self.credentials)
             self._cloud = cloud
