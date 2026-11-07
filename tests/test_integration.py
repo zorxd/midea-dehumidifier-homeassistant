@@ -3,6 +3,8 @@
 
 """Tests for Midea Dehumidifier (Cloud), with the Midea cloud replaced by fakes."""
 
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -457,3 +459,17 @@ async def test_humidity_uses_5_percent_steps(hass: HomeAssistant) -> None:
                 blocking=True,
             )
     assert [c["target_humidity"] for c in calls] == [45, 45, 35]
+
+
+def test_translations_have_the_same_keys() -> None:
+    """Every translation covers exactly the texts of the English one."""
+    folder = Path(__file__).parents[1] / "custom_components" / DOMAIN / "translations"
+
+    def keys(tree, prefix=""):
+        if not isinstance(tree, dict):
+            return {prefix}
+        return set().union(*(keys(v, f"{prefix}/{k}") for k, v in tree.items()))
+
+    english = keys(json.loads((folder / "en.json").read_text(encoding="utf-8")))
+    for path in folder.glob("*.json"):
+        assert keys(json.loads(path.read_text(encoding="utf-8"))) == english, path.name

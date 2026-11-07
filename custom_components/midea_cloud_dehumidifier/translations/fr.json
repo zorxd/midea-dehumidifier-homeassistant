@@ -1,0 +1,105 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connexion au nuage Midea",
+        "description": "Connectez-vous avec le compte que vous utilisez dans l'application Midea. Un compte distinct avec lequel le déshumidificateur est partagé est préférable. Seuls des hachages du mot de passe sont conservés, pas le mot de passe.",
+        "data": {
+          "account": "Courriel",
+          "password": "Mot de passe",
+          "app": "Application Midea",
+          "scan_interval": "Intervalle d'interrogation (secondes)"
+        }
+      },
+      "appliance": {
+        "title": "Choisir un déshumidificateur",
+        "description": "Ce compte a plusieurs déshumidificateurs. Choisissez celui à ajouter; ajoutez les autres en configurant l'intégration de nouveau.",
+        "data": {
+          "appliance_id": "Déshumidificateur"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter au nuage Midea",
+      "invalid_auth": "Le nuage Midea a refusé le courriel ou le mot de passe",
+      "password_not_ascii": "Le mot de passe ne peut contenir que des lettres simples, des chiffres et des symboles (sans accents ni émojis)",
+      "unknown": "Erreur inattendue",
+      "no_dehumidifiers": "Aucun déshumidificateur trouvé sur ce compte"
+    },
+    "abort": {
+      "already_configured": "Ce déshumidificateur est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options du déshumidificateur Midea",
+        "description": "Seuls des hachages du mot de passe sont conservés. Entrez le mot de passe seulement après l'avoir changé dans l'application Midea; laissez le champ vide pour garder la connexion actuelle.",
+        "data": {
+          "password": "Nouveau mot de passe",
+          "scan_interval": "Intervalle d'interrogation (secondes)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Impossible de se connecter au nuage Midea",
+      "invalid_auth": "Le nuage Midea a refusé le courriel ou le mot de passe",
+      "password_not_ascii": "Le mot de passe ne peut contenir que des lettres simples, des chiffres et des symboles (sans accents ni émojis)",
+      "unknown": "Erreur inattendue"
+    }
+  },
+  "entity": {
+    "humidifier": {
+      "dehumidifier": {
+        "state_attributes": {
+          "mode": {
+            "state": {
+              "set": "Consigne",
+              "continuous": "Continu",
+              "smart": "Intelligent",
+              "dry_clothes": "Séchage du linge"
+            }
+          }
+        }
+      }
+    },
+    "select": {
+      "fan_speed": {
+        "name": "Vitesse du ventilateur",
+        "state": {
+          "low": "Basse",
+          "medium": "Moyenne",
+          "high": "Élevée"
+        }
+      }
+    },
+    "sensor": {
+      "current_humidity": {
+        "name": "Humidité"
+      },
+      "current_temperature": {
+        "name": "Température"
+      },
+      "tank_level": {
+        "name": "Niveau d'eau"
+      },
+      "error_code": {
+        "name": "Code d'erreur"
+      }
+    },
+    "binary_sensor": {
+      "tank_full": {
+        "name": "Réservoir plein"
+      },
+      "filter_indicator": {
+        "name": "Filtre à nettoyer"
+      },
+      "defrosting": {
+        "name": "Dégivrage"
+      },
+      "error": {
+        "name": "Erreur"
+      }
+    }
+  }
+}
