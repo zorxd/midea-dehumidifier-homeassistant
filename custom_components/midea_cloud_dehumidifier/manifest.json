@@ -1,6 +1,9 @@
 {
   "domain": "midea_cloud_dehumidifier",
   "name": "Midea Dehumidifier (Cloud)",
+  "categories": [
+    "climate.air_purifiers_humidifiers"
+  ],
   "codeowners": [
     "@zorxd"
   ],
