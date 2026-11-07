@@ -7,7 +7,7 @@ Tested with a Midea Cube 50-pint dehumidifier and the MSmartHome cloud (the Mide
 ## Features
 
 - Humidifier entity: on/off, target humidity (35–85 % in 5 % steps, like the Midea app) and mode (Set, Continuous, plus Smart and Dry clothes on models that have them)
-- Fan speed select: low, medium, high
+- Fan speed select: low, medium, high (only low and high on models with two speeds, like the Cube 50-pint)
 - Sensors: humidity, temperature, water level (on models that report it), error code
 - Binary sensors: tank full, filter needs cleaning (on models that report it), error, defrosting (disabled by default)
 

@@ -482,3 +482,24 @@ async def test_reauth_stores_new_hashes(hass: HomeAssistant) -> None:
     assert entry.data["credentials"] == password_credentials("new-secret")
     assert "password" not in entry.data
     assert entry.state is config_entries.ConfigEntryState.LOADED
+
+
+async def test_two_speed_models_have_no_medium(hass: HomeAssistant) -> None:
+    """The Cube reports fan speed capability 3 and has only low and high."""
+    with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
+        await _setup(hass)
+
+    state = hass.states.get("select.deshumidificateur_fan_speed")
+    assert state.attributes["options"] == ["low", "high"]
+
+
+async def test_three_speed_models_have_medium(hass: HomeAssistant) -> None:
+    """Models reporting three speeds (capability 7) also get medium."""
+    capabilities = {**STATE["capabilities"], "fan_speed": 7}
+    with patch(
+        f"{CLIENT}.refresh", return_value={**STATE, "capabilities": capabilities}
+    ):
+        await _setup(hass)
+
+    state = hass.states.get("select.deshumidificateur_fan_speed")
+    assert state.attributes["options"] == ["low", "medium", "high"]
