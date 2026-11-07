@@ -39,6 +39,7 @@ FAN_SPEEDS = {
     80: "high",
 }
 
-# The Midea app offers targets from 35 to 85 percent
+# The Midea app offers targets from 35 to 85 percent, in steps of 5
 MIN_HUMIDITY = 35
 MAX_HUMIDITY = 85
+HUMIDITY_STEP = 5

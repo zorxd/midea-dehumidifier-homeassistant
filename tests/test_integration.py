@@ -427,3 +427,26 @@ def test_transparent_send_body_has_only_accepted_fields() -> None:
     assert set(sent["data"]) <= accepted
     assert sent["data"]["applianceCode"] == "1506"
     assert sent["data"]["deviceId"] == "0123456789abcdef"
+
+
+async def test_humidity_uses_5_percent_steps(hass: HomeAssistant) -> None:
+    """The slider moves in 5 % steps and other values are rounded to them."""
+    with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
+        await _setup(hass)
+
+    state = hass.states.get("humidifier.deshumidificateur")
+    assert state.attributes["target_humidity_step"] == 5
+
+    calls = []
+    with patch(
+        f"{CLIENT}.set_state",
+        lambda self, **changes: calls.append(changes) or {**STATE, **changes},
+    ):
+        for humidity in (43, 47, 36):
+            await hass.services.async_call(
+                "humidifier",
+                "set_humidity",
+                {"entity_id": "humidifier.deshumidificateur", "humidity": humidity},
+                blocking=True,
+            )
+    assert [c["target_humidity"] for c in calls] == [45, 45, 35]

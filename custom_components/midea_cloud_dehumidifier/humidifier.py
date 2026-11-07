@@ -13,7 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, MAX_HUMIDITY, MIN_HUMIDITY, MODE_SET, MODES
+from .const import DOMAIN, HUMIDITY_STEP, MAX_HUMIDITY, MIN_HUMIDITY, MODE_SET, MODES
 from .entity import MideaCoordinatorEntity
 
 MODE_IDS = {name: mode for mode, name in MODES.items()}
@@ -36,6 +36,7 @@ class MideaDehumidifier(MideaCoordinatorEntity, HumidifierEntity):
     _attr_supported_features = HumidifierEntityFeature.MODES
     _attr_min_humidity = MIN_HUMIDITY
     _attr_max_humidity = MAX_HUMIDITY
+    _attr_target_humidity_step = HUMIDITY_STEP
 
     def __init__(self, coordinator) -> None:
         """Initialize the entity."""
@@ -79,7 +80,13 @@ class MideaDehumidifier(MideaCoordinatorEntity, HumidifierEntity):
         await self.coordinator.async_set_state(running=False)
 
     async def async_set_humidity(self, humidity: int) -> None:
-        """Set the target humidity; it only applies in Set mode."""
+        """Set the target humidity; it only applies in Set mode.
+
+        Rounded to the 5 % steps the Midea app offers, since automations can
+        ask for any value.
+        """
+        humidity = round(humidity / HUMIDITY_STEP) * HUMIDITY_STEP
+        humidity = min(max(humidity, MIN_HUMIDITY), MAX_HUMIDITY)
         changes: dict[str, Any] = {"target_humidity": humidity}
         if self.coordinator.data.get("mode") != MODE_SET:
             changes["mode"] = MODE_SET
