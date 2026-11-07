@@ -31,9 +31,19 @@ Create a second account in the Midea app and share the dehumidifier to it from y
 - Your main password stays out of Home Assistant.
 - Removing the share revokes Home Assistant's access.
 
+## Password storage
+
+The integration doesn't store your password. At setup it logs in once, then keeps only the two password hashes the Midea cloud checks at login. These hashes are salted with the account's login ID, so they can't be looked up in precomputed tables, and the password can't be read back from them.
+
+The hashes still let anyone who has them log in to that Midea account, just like the password would, and a weak password could be guessed from them. Protect the account with a long, unique password; the separate account described above limits what a leak would expose.
+
+The password must contain only plain ASCII characters (no accents or emoji), because that is all the Midea login hashing supports.
+
+After changing the password in the Midea app, enter the new one under **Configure**. Entries set up with version 0.1.0, which stored the password, switch to hashes automatically the next time Home Assistant starts.
+
 ## Polling
 
-The integration polls the cloud every 60 seconds by default. You can change this, and the password, under **Configure**. Polling much more often puts load on Midea's servers for little benefit.
+The integration polls the cloud every 60 seconds by default. You can change this under **Configure**. Polling much more often puts load on Midea's servers for little benefit.
 
 ## How it works
 

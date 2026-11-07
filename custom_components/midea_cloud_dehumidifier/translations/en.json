@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to the Midea cloud",
-        "description": "Sign in with the account you use in the Midea app. A separate account with the dehumidifier shared to it works best.",
+        "description": "Sign in with the account you use in the Midea app. A separate account with the dehumidifier shared to it works best. Only hashes of the password are stored, not the password.",
         "data": {
           "account": "E-mail",
           "password": "Password",
@@ -22,8 +22,9 @@
     "error": {
       "cannot_connect": "Failed to connect to the Midea cloud",
       "invalid_auth": "The Midea cloud rejected the e-mail or password",
-      "no_dehumidifiers": "No dehumidifier was found on this account",
-      "unknown": "Unexpected error"
+      "password_not_ascii": "The password can only contain plain letters, digits and symbols (no accents or emoji)",
+      "unknown": "Unexpected error",
+      "no_dehumidifiers": "No dehumidifier was found on this account"
     },
     "abort": {
       "already_configured": "This dehumidifier is already configured"
@@ -33,12 +34,18 @@
     "step": {
       "init": {
         "title": "Midea Dehumidifier options",
-        "description": "Update the account password and polling settings.",
+        "description": "Only hashes of the password are stored. Enter the password only after changing it in the Midea app; leave it empty to keep the current login.",
         "data": {
-          "password": "Password",
+          "password": "New password",
           "scan_interval": "Scan interval (seconds)"
         }
       }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the Midea cloud",
+      "invalid_auth": "The Midea cloud rejected the e-mail or password",
+      "password_not_ascii": "The password can only contain plain letters, digits and symbols (no accents or emoji)",
+      "unknown": "Unexpected error"
     }
   },
   "entity": {

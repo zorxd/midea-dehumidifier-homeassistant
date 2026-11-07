@@ -9,6 +9,8 @@ DEFAULT_APP = "MSmartHome"
 
 CONF_ACCOUNT = "account"
 CONF_PASSWORD = "password"
+# Password hashes stored instead of the password
+CONF_CREDENTIALS = "credentials"
 CONF_APP = "app"
 CONF_APPLIANCE_ID = "appliance_id"
 CONF_SCAN_INTERVAL = "scan_interval"

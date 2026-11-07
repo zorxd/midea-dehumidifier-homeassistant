@@ -44,6 +44,40 @@ def new_device_identity() -> tuple[str, str]:
 class _MideaCloud(MideaCloud):
     """Midea cloud client that sends commands the way the cloud now expects."""
 
+    _credentials: dict[str, str] | None = None
+
+    def use_credentials(self, credentials: dict[str, str]) -> None:
+        """Log in with stored password hashes instead of the password.
+
+        The cloud only ever receives these hashes, which depend on the login
+        ID and the password, so they can stand in for the password.
+        """
+        self._credentials = credentials
+        self._security.encrypt_password = lambda login_id, password: credentials[
+            "password_hash"
+        ]
+        self._security.encrypt_iam_password = lambda login_id, password: credentials[
+            "iam_password_hash"
+        ]
+
+    def credentials(self, password: str) -> dict[str, str]:
+        """Return the password hashes to store; call after logging in."""
+        return {
+            "login_id": self._login_id,
+            "password_hash": self._security.encrypt_password(self._login_id, password),
+            "iam_password_hash": self._security.encrypt_iam_password(
+                self._login_id, password
+            ),
+        }
+
+    def _get_login_id(self) -> None:
+        super()._get_login_id()
+        # The stored hashes are only valid for the login ID they were made with
+        if self._credentials and self._credentials["login_id"] != self._login_id:
+            raise MideaApiAuthError(
+                "The account's login ID changed; enter the password again"
+            )
+
     def api_request(self, endpoint, args=None, *rest, **kwargs):
         # The cloud rejects unknown fields in transparent/send: it wants
         # "applianceCode" instead of "applianceId", and none of the extra
@@ -68,24 +102,31 @@ class _MideaCloud(MideaCloud):
 
 
 class MideaDehumidifierClient:
-    """Read and control one dehumidifier through the Midea cloud."""
+    """Read and control one dehumidifier through the Midea cloud.
+
+    Give it either the password or stored credentials (password hashes). After
+    a login with the password, credentials holds the hashes to store and the
+    password is forgotten.
+    """
 
     def __init__(
         self,
         account: str,
-        password: str,
         app: str,
         device_id: str,
         push_token: str,
         appliance_id: str | None = None,
+        password: str | None = None,
+        credentials: dict[str, str] | None = None,
     ) -> None:
         """Initialize the client; nothing is sent until the first call."""
         self.account = account
-        self.password = password
         self.app = app
         self.device_id = device_id
         self.push_token = push_token
         self.appliance_id = appliance_id
+        self.password = password
+        self.credentials = credentials
         self._cloud: MideaCloud | None = None
         self._device: LanDevice | None = None
         self._lock = Lock()
@@ -97,7 +138,7 @@ class MideaDehumidifierClient:
             cloud = _MideaCloud(
                 appkey=app["appkey"],
                 account=self.account,
-                password=self.password,
+                password=self.password or "",
                 appid=app["appid"],
                 api_url=app["apiurl"],
                 sign_key=app["signkey"],
@@ -107,7 +148,13 @@ class MideaDehumidifierClient:
                 pushtoken=self.push_token,
                 device_id=self.device_id,
             )
+            if self.password is None:
+                cloud.use_credentials(self.credentials)
             cloud.authenticate()
+            if self.password is not None:
+                self.credentials = cloud.credentials(self.password)
+                self.password = None
+                cloud.use_credentials(self.credentials)
             self._cloud = cloud
         return self._cloud
 
@@ -120,6 +167,9 @@ class MideaDehumidifierClient:
         with self._lock:
             try:
                 return func(self._connect())
+            except MideaApiError:
+                self._cloud = None
+                raise
             except (AuthenticationError, CloudAuthenticationError) as err:
                 self._cloud = None
                 raise MideaApiAuthError(str(err)) from err
