@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Xavier Douville
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Client for Midea dehumidifiers through the Midea cloud.
 
 Wraps the midea-beautiful-air library, which is synchronous: call these

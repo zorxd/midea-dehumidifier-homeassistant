@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Xavier Douville
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """The Midea Dehumidifier (Cloud) integration."""
 
 from __future__ import annotations

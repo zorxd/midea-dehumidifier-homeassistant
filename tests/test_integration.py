@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Xavier Douville
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 """Tests for Midea Dehumidifier (Cloud), with the Midea cloud replaced by fakes."""
 
 from unittest.mock import patch
