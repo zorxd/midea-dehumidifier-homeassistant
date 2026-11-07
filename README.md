@@ -58,3 +58,7 @@ The integration uses the [midea-beautiful-air](https://github.com/nbogojevic/mid
 - **Commands:** the cloud now rejects the fields the library sends to the appliance. The integration sends the request the way the cloud expects it (`applianceCode` and only the fields the cloud accepts).
 
 A future change to the Midea cloud could stop the integration from working.
+
+## License
+
+This integration is licensed under the [GNU General Public License v3.0](LICENSE). It is not affiliated with or endorsed by Midea.
