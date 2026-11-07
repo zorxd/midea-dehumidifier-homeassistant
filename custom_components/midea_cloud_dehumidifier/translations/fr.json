@@ -17,6 +17,13 @@
         "data": {
           "appliance_id": "Déshumidificateur"
         }
+      },
+      "reauth_confirm": {
+        "title": "Connexion Midea refusée",
+        "description": "Le nuage Midea a refusé la connexion enregistrée pour {account}, par exemple parce que le mot de passe a changé. Entrez le mot de passe actuel du compte. Seuls ses hachages sont conservés.",
+        "data": {
+          "password": "Mot de passe"
+        }
       }
     },
     "error": {
@@ -27,7 +34,8 @@
       "no_dehumidifiers": "Aucun déshumidificateur trouvé sur ce compte"
     },
     "abort": {
-      "already_configured": "Ce déshumidificateur est déjà configuré"
+      "already_configured": "Ce déshumidificateur est déjà configuré",
+      "reauth_successful": "Le nouveau mot de passe fonctionne; le déshumidificateur se reconnecte"
     }
   },
   "options": {

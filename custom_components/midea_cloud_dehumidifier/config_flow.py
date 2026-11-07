@@ -184,6 +184,43 @@ class MideaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="appliance", data_schema=schema)
 
+    async def async_step_reauth(self, entry_data: dict[str, Any]):
+        """Ask for the password again after the cloud rejected the login."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None):
+        """Log in with the new password and store its hashes."""
+        errors: dict[str, str] = {}
+        entry = self._get_reauth_entry()
+
+        if user_input is not None:
+            result = await async_log_in(
+                self.hass,
+                entry.data[CONF_ACCOUNT],
+                user_input[CONF_PASSWORD],
+                entry.data[CONF_APP],
+                entry.data[CONF_DEVICE_ID],
+                entry.data[CONF_PUSH_TOKEN],
+                errors,
+            )
+            if result is not None:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_CREDENTIALS: result[0]}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PASSWORD): TextSelector(
+                        TextSelectorConfig(type="password")
+                    )
+                }
+            ),
+            description_placeholders={"account": entry.data[CONF_ACCOUNT]},
+            errors=errors,
+        )
+
     async def _async_create(self, appliance: dict[str, Any]):
         """Create the entry for one dehumidifier."""
         await self.async_set_unique_id(appliance["id"])

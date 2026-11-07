@@ -17,6 +17,13 @@
         "data": {
           "appliance_id": "Dehumidifier"
         }
+      },
+      "reauth_confirm": {
+        "title": "Midea login rejected",
+        "description": "The Midea cloud rejected the stored login for {account}, for example because the password changed. Enter the account's current password. Only its hashes are stored.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -27,7 +34,8 @@
       "no_dehumidifiers": "No dehumidifier was found on this account"
     },
     "abort": {
-      "already_configured": "This dehumidifier is already configured"
+      "already_configured": "This dehumidifier is already configured",
+      "reauth_successful": "The new password works; the dehumidifier is reconnecting"
     }
   },
   "options": {

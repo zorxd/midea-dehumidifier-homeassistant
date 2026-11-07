@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import MideaApiAuthError, MideaApiError, MideaDehumidifierClient
@@ -45,7 +45,9 @@ class MideaDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         try:
             return await self.hass.async_add_executor_job(self.api.refresh)
         except MideaApiAuthError as err:
-            raise UpdateFailed(f"Midea cloud rejected the login: {err}") from err
+            # Stops polling and asks for the password, instead of retrying a
+            # rejected login every poll, which could get the account locked
+            raise ConfigEntryAuthFailed(f"Midea cloud rejected the login: {err}") from err
         except MideaApiError as err:
             raise UpdateFailed(f"Midea cloud error: {err}") from err
 

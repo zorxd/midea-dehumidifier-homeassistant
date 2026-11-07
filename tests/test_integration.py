@@ -442,3 +442,43 @@ async def test_smart_mode_needs_auto_capability(hass: HomeAssistant) -> None:
 
     modes = hass.states.get("humidifier.deshumidificateur").attributes["available_modes"]
     assert modes == ["set", "continuous", "smart", "dry_clothes"]
+
+
+async def test_rejected_login_asks_for_password(hass: HomeAssistant) -> None:
+    """A rejected login stops polling and starts re-authentication."""
+    with patch(f"{CLIENT}.refresh", side_effect=MideaApiAuthError("invalid password")):
+        entry = await _setup(hass)
+
+    assert entry.state is config_entries.ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    assert [f["context"]["source"] for f in flows] == [config_entries.SOURCE_REAUTH]
+
+
+async def test_reauth_stores_new_hashes(hass: HomeAssistant) -> None:
+    """Re-authentication checks the new password, then stores only its hashes."""
+    with patch(f"{CLIENT}.refresh", side_effect=MideaApiAuthError("invalid password")):
+        entry = await _setup(hass)
+    flow = hass.config_entries.flow.async_progress_by_handler(DOMAIN)[0]
+
+    # A wrong password keeps the form open
+    with patch(f"{CLIENT}.list_dehumidifiers", side_effect=MideaApiAuthError("no")):
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {"password": "wrong"}
+        )
+    assert result["errors"] == {"base": "invalid_auth"}
+
+    seen = []
+    with patch(
+        f"{CLIENT}.list_dehumidifiers", recording_login(ONE_APPLIANCE, seen)
+    ), patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
+        result = await hass.config_entries.flow.async_configure(
+            flow["flow_id"], {"password": "new-secret"}
+        )
+        await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"
+    assert seen == [password_credentials("new-secret")]
+    assert entry.data["credentials"] == password_credentials("new-secret")
+    assert "password" not in entry.data
+    assert entry.state is config_entries.ConfigEntryState.LOADED
