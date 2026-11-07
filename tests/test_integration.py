@@ -7,8 +7,6 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -17,7 +15,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.midea_cloud_dehumidifier.api import (
     MideaApiAuthError,
-    MideaDehumidifierClient,
     _MideaCloud,
     password_credentials,
 )
@@ -49,12 +46,11 @@ CREDENTIALS = {
 ONE_APPLIANCE = [{"id": "1506", "name": "Déshumidificateur", "model": "41377"}]
 
 
-def fake_login(appliances):
-    """Fake list_dehumidifiers that logs in like the real one: hashes replace the password."""
+def recording_login(appliances, seen):
+    """Fake list_dehumidifiers that records the credentials it logs in with."""
 
     def list_dehumidifiers(self):
-        self.credentials = CREDENTIALS
-        self.password = None
+        seen.append(self.credentials)
         return appliances
 
     return list_dehumidifiers
@@ -75,9 +71,10 @@ async def test_config_flow_creates_entry(hass: HomeAssistant) -> None:
     )
     assert result["type"] is FlowResultType.FORM
 
-    with patch(f"{CLIENT}.list_dehumidifiers", fake_login(ONE_APPLIANCE)), patch(
-        f"{CLIENT}.refresh", return_value=dict(STATE)
-    ):
+    seen = []
+    with patch(
+        f"{CLIENT}.list_dehumidifiers", recording_login(ONE_APPLIANCE, seen)
+    ), patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], USER_INPUT
         )
@@ -92,9 +89,11 @@ async def test_config_flow_creates_entry(hass: HomeAssistant) -> None:
     assert len(data["device_id"]) == 16
     assert data["device_id"] != "c1acad8939ac0d7d"
     assert data["push_token"]
-    # Only the password hashes are stored
+    # Logged in with the password hashes, which are stored instead of it
+    assert seen == [password_credentials("secret")]
     assert "password" not in data
-    assert data["credentials"] == CREDENTIALS
+    assert data["credentials"] == password_credentials("secret")
+    assert result["options"] == {"scan_interval": 60}
 
 
 async def test_config_flow_invalid_auth(hass: HomeAssistant) -> None:
@@ -119,7 +118,7 @@ async def test_config_flow_chooses_among_several(hass: HomeAssistant) -> None:
         {"id": "1", "name": "Basement", "model": "a"},
         {"id": "2", "name": "Garage", "model": "b"},
     ]
-    with patch(f"{CLIENT}.list_dehumidifiers", fake_login(appliances)), patch(
+    with patch(f"{CLIENT}.list_dehumidifiers", return_value=appliances), patch(
         f"{CLIENT}.refresh", return_value=dict(STATE)
     ):
         result = await hass.config_entries.flow.async_configure(
@@ -135,16 +134,16 @@ async def test_config_flow_chooses_among_several(hass: HomeAssistant) -> None:
     assert result["title"] == "Garage"
 
 
-async def _setup(hass: HomeAssistant, **login) -> MockConfigEntry:
-    login = login or {"credentials": CREDENTIALS}
-    account = {k: v for k, v in USER_INPUT.items() if k != "password"}
+async def _setup(hass: HomeAssistant) -> MockConfigEntry:
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Déshumidificateur",
         unique_id="1506",
+        options={"scan_interval": 60},
         data={
-            **account,
-            **login,
+            "account": USER_INPUT["account"],
+            "app": USER_INPUT["app"],
+            "credentials": CREDENTIALS,
             "appliance_id": "1506",
             "model": "41377",
             "device_id": "0123456789abcdef",
@@ -264,35 +263,18 @@ async def test_config_flow_rejects_non_ascii_password(hass: HomeAssistant) -> No
     assert result["errors"] == {"base": "password_not_ascii"}
 
 
-async def test_stored_password_is_replaced_by_hashes(hass: HomeAssistant) -> None:
-    """Entries from 0.1.0 stored the password; setup swaps it for its hashes."""
-
-    def refresh(self):
-        assert self.password == "old-secret"
-        self.credentials = CREDENTIALS
-        self.password = None
-        return dict(STATE)
-
-    with patch(f"{CLIENT}.refresh", refresh):
-        entry = await _setup(hass, password="old-secret")
-
-    assert "password" not in entry.data
-    assert entry.data["credentials"] == CREDENTIALS
-    assert hass.states.get("humidifier.deshumidificateur").state == "on"
-
-
 async def test_logs_in_with_stored_hashes(hass: HomeAssistant) -> None:
-    """An entry with hashes logs in with them, without a password."""
-    seen = {}
+    """An entry logs in with its stored hashes."""
+    seen = []
 
     def refresh(self):
-        seen.update(password=self.password, credentials=self.credentials)
+        seen.append(self.credentials)
         return dict(STATE)
 
     with patch(f"{CLIENT}.refresh", refresh):
         await _setup(hass)
 
-    assert seen == {"password": None, "credentials": CREDENTIALS}
+    assert seen == [CREDENTIALS]
 
 
 async def test_options_new_password_replaces_hashes(hass: HomeAssistant) -> None:
@@ -300,16 +282,13 @@ async def test_options_new_password_replaces_hashes(hass: HomeAssistant) -> None
     with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
         entry = await _setup(hass)
 
-    new_credentials = {**CREDENTIALS, "password_sha256": "newsha"}
-
-    def list_dehumidifiers(self):
-        assert self.password == "new-secret"
-        self.credentials = new_credentials
-        self.password = None
-        return ONE_APPLIANCE
+    new_credentials = password_credentials("new-secret")
+    seen = []
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    with patch(f"{CLIENT}.list_dehumidifiers", list_dehumidifiers), patch(
+    with patch(
+        f"{CLIENT}.list_dehumidifiers", recording_login(ONE_APPLIANCE, seen)
+    ), patch(
         f"{CLIENT}.refresh", return_value=dict(STATE)
     ):
         result = await hass.config_entries.options.async_configure(
@@ -318,6 +297,7 @@ async def test_options_new_password_replaces_hashes(hass: HomeAssistant) -> None
         await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert seen == [new_credentials]
     assert entry.options == {"scan_interval": 120}
     assert entry.data["credentials"] == new_credentials
     assert "password" not in entry.data
@@ -329,8 +309,6 @@ async def test_options_new_password_reloads_with_same_interval(
     """A new password takes effect even when the scan interval is unchanged."""
     with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
         entry = await _setup(hass)
-    hass.config_entries.async_update_entry(entry, options={"scan_interval": 60})
-    await hass.async_block_till_done()
 
     seen = []
 
@@ -338,13 +316,8 @@ async def test_options_new_password_reloads_with_same_interval(
         seen.append(self.credentials)
         return dict(STATE)
 
-    def list_dehumidifiers(self):
-        self.credentials = {**CREDENTIALS, "password_sha256": "newsha"}
-        self.password = None
-        return ONE_APPLIANCE
-
     result = await hass.config_entries.options.async_init(entry.entry_id)
-    with patch(f"{CLIENT}.list_dehumidifiers", list_dehumidifiers), patch(
+    with patch(f"{CLIENT}.list_dehumidifiers", return_value=ONE_APPLIANCE), patch(
         f"{CLIENT}.refresh", refresh
     ):
         await hass.config_entries.options.async_configure(
@@ -353,7 +326,7 @@ async def test_options_new_password_reloads_with_same_interval(
         await hass.async_block_till_done()
 
     # Reloaded and logged in with the new hashes
-    assert seen and seen[-1]["password_sha256"] == "newsha"
+    assert seen and seen[-1] == password_credentials("new-secret")
 
 
 async def test_options_wrong_password_keeps_hashes(hass: HomeAssistant) -> None:
@@ -392,22 +365,6 @@ def test_credentials_match_library_hashes() -> None:
         assert with_hashes._security.encrypt_iam_password(
             login_id, ""
         ) == with_password._security.encrypt_iam_password(login_id, "secret")
-
-
-def test_old_credentials_ask_for_password() -> None:
-    """Version 0.2 stored one-time hashes; they lead to a clear login error."""
-    client = MideaDehumidifierClient(
-        account="a",
-        app="MSmartHome",
-        device_id="0123456789abcdef",
-        push_token="token",
-        appliance_id="1506",
-        credentials={"login_id": "x", "password_hash": "y", "iam_password_hash": "z"},
-    )
-    with patch("midea_beautiful.cloud.MideaCloud.authenticate") as authenticate:
-        with pytest.raises(MideaApiAuthError, match="Configure"):
-            client.refresh()
-    authenticate.assert_not_called()
 
 
 def test_transparent_send_body_has_only_accepted_fields() -> None:

@@ -10,7 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, FAN_SPEEDS
+from .const import FAN_SPEEDS
 from .entity import MideaCoordinatorEntity
 
 FAN_SPEED_IDS = {name: speed for speed, name in FAN_SPEEDS.items()}
@@ -20,7 +20,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the fan speed select."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     async_add_entities([MideaFanSpeedSelect(coordinator)])
 
 

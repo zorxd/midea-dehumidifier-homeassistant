@@ -16,7 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, HUMIDITY_STEP, MAX_HUMIDITY, MIN_HUMIDITY, MODE_SET, MODES
+from .const import HUMIDITY_STEP, MAX_HUMIDITY, MIN_HUMIDITY, MODE_SET, MODES
 from .entity import MideaCoordinatorEntity
 
 MODE_IDS = {name: mode for mode, name in MODES.items()}
@@ -29,7 +29,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the dehumidifier entity."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     async_add_entities([MideaDehumidifier(coordinator)])
 
 

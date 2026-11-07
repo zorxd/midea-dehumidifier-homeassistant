@@ -19,7 +19,6 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
 from .entity import MideaCoordinatorEntity
 
 
@@ -70,7 +69,7 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up binary sensors for the capabilities the appliance reports."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    coordinator = entry.runtime_data
     capabilities = coordinator.data.get("capabilities", {})
     async_add_entities(
         MideaBinarySensor(coordinator, description)

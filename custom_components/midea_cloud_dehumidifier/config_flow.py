@@ -26,6 +26,7 @@ from .api import (
     MideaApiError,
     MideaDehumidifierClient,
     new_device_identity,
+    password_credentials,
 )
 from .const import (
     APPS,
@@ -68,15 +69,32 @@ def build_user_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
 
 
 async def async_log_in(
-    hass, client: MideaDehumidifierClient, errors: dict[str, str]
-) -> list[dict[str, Any]] | None:
-    """Log in and list the dehumidifiers, or set errors and return None."""
-    # The library hashes the password as ASCII and fails on anything else
-    if client.password is not None and not client.password.isascii():
+    hass,
+    account: str,
+    password: str,
+    app: str,
+    device_id: str,
+    push_token: str,
+    errors: dict[str, str],
+) -> tuple[dict[str, str], list[dict[str, Any]]] | None:
+    """Log in and return the credentials to store and the dehumidifiers.
+
+    Sets errors and returns None if the login fails.
+    """
+    # The Midea login hashes the password as ASCII
+    if not password.isascii():
         errors["base"] = "password_not_ascii"
         return None
+    credentials = password_credentials(password)
+    client = MideaDehumidifierClient(
+        account=account,
+        app=app,
+        device_id=device_id,
+        push_token=push_token,
+        credentials=credentials,
+    )
     try:
-        return await hass.async_add_executor_job(client.list_dehumidifiers)
+        return credentials, await hass.async_add_executor_job(client.list_dehumidifiers)
     except MideaApiAuthError:
         errors["base"] = "invalid_auth"
     except MideaApiError:
@@ -94,6 +112,7 @@ class MideaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         """Initialize the flow."""
         self._account: dict[str, Any] = {}
+        self._scan_interval = DEFAULT_SCAN_INTERVAL
         self._appliances: list[dict[str, Any]] = []
         # One identity per flow, so retries don't use up more login slots
         self._device_id, self._push_token = new_device_identity()
@@ -104,15 +123,17 @@ class MideaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             account = str(user_input[CONF_ACCOUNT]).strip()
-            client = MideaDehumidifierClient(
-                account=account,
-                app=user_input[CONF_APP],
-                device_id=self._device_id,
-                push_token=self._push_token,
-                password=user_input[CONF_PASSWORD],
+            result = await async_log_in(
+                self.hass,
+                account,
+                user_input[CONF_PASSWORD],
+                user_input[CONF_APP],
+                self._device_id,
+                self._push_token,
+                errors,
             )
-            appliances = await async_log_in(self.hass, client, errors)
-            if appliances is not None:
+            if result is not None:
+                credentials, appliances = result
                 configured = self._async_current_ids()
                 self._appliances = [a for a in appliances if a["id"] not in configured]
                 if not appliances:
@@ -123,12 +144,12 @@ class MideaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     # Store the password hashes, not the password
                     self._account = {
                         CONF_ACCOUNT: account,
-                        CONF_CREDENTIALS: client.credentials,
+                        CONF_CREDENTIALS: credentials,
                         CONF_APP: user_input[CONF_APP],
-                        CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
                         CONF_DEVICE_ID: self._device_id,
                         CONF_PUSH_TOKEN: self._push_token,
                     }
+                    self._scan_interval = int(user_input[CONF_SCAN_INTERVAL])
                     if len(self._appliances) == 1:
                         return await self._async_create(self._appliances[0])
                     return await self.async_step_appliance()
@@ -174,6 +195,7 @@ class MideaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_APPLIANCE_ID: appliance["id"],
                 "model": appliance["model"],
             },
+            options={CONF_SCAN_INTERVAL: self._scan_interval},
         )
 
     @staticmethod
@@ -196,17 +218,18 @@ class MideaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
 
         if user_input is not None:
             if password := user_input.get(CONF_PASSWORD):
-                client = MideaDehumidifierClient(
-                    account=entry.data[CONF_ACCOUNT],
-                    app=entry.data[CONF_APP],
-                    device_id=entry.data[CONF_DEVICE_ID],
-                    push_token=entry.data[CONF_PUSH_TOKEN],
-                    password=password,
+                result = await async_log_in(
+                    self.hass,
+                    entry.data[CONF_ACCOUNT],
+                    password,
+                    entry.data[CONF_APP],
+                    entry.data[CONF_DEVICE_ID],
+                    entry.data[CONF_PUSH_TOKEN],
+                    errors,
                 )
-                if await async_log_in(self.hass, client, errors) is not None:
-                    data = {k: v for k, v in entry.data.items() if k != CONF_PASSWORD}
+                if result is not None:
                     self.hass.config_entries.async_update_entry(
-                        entry, data={**data, CONF_CREDENTIALS: client.credentials}
+                        entry, data={**entry.data, CONF_CREDENTIALS: result[0]}
                     )
                     # The flow only reloads when the options change, so a
                     # new password alone would otherwise wait for a restart
@@ -217,9 +240,7 @@ class MideaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
                     data={CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL])},
                 )
 
-        scan_interval = entry.options.get(
-            CONF_SCAN_INTERVAL, entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
-        )
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         schema = vol.Schema(
             {
                 vol.Optional(CONF_PASSWORD): TextSelector(

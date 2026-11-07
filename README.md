@@ -44,7 +44,7 @@ Protect the account with a long, unique password; the separate account described
 
 The password must contain only plain ASCII characters (no accents or emoji), because that is all the Midea login hashing supports.
 
-After changing the password in the Midea app, enter the new one under **Configure**. Entries set up with version 0.1.0, which stored the password, switch to hashes automatically the next time Home Assistant starts. Entries set up with version 0.2.0 or 0.2.1 stored hashes that only worked once: enter the password again under **Configure**.
+After changing the password in the Midea app, enter the new one under **Configure**.
 
 ## Polling
 

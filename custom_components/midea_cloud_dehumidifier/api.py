@@ -68,11 +68,6 @@ class _MideaCloud(MideaCloud):
         The cloud receives hash(login ID + password hash + app key), with a new
         login ID for every login, so only the inner password hashes are stored.
         """
-        if not {"password_sha256", "password_md5_md5"} <= credentials.keys():
-            # Version 0.2 stored the outer hashes, which only work once
-            raise MideaApiAuthError(
-                "The stored login no longer works; enter the password under Configure"
-            )
         appkey = self._security._appkey
 
         def outer(login_id: str, inner: str) -> str:
@@ -111,9 +106,7 @@ class _MideaCloud(MideaCloud):
 class MideaDehumidifierClient:
     """Read and control one dehumidifier through the Midea cloud.
 
-    Give it either the password or stored credentials (password hashes). After
-    a login with the password, credentials holds the hashes to store and the
-    password is forgotten.
+    It logs in with credentials from password_credentials(), never the password.
     """
 
     def __init__(
@@ -122,9 +115,8 @@ class MideaDehumidifierClient:
         app: str,
         device_id: str,
         push_token: str,
+        credentials: dict[str, str],
         appliance_id: str | None = None,
-        password: str | None = None,
-        credentials: dict[str, str] | None = None,
     ) -> None:
         """Initialize the client; nothing is sent until the first call."""
         self.account = account
@@ -132,7 +124,6 @@ class MideaDehumidifierClient:
         self.device_id = device_id
         self.push_token = push_token
         self.appliance_id = appliance_id
-        self.password = password
         self.credentials = credentials
         self._cloud: MideaCloud | None = None
         self._device: LanDevice | None = None
@@ -145,7 +136,7 @@ class MideaDehumidifierClient:
             cloud = _MideaCloud(
                 appkey=app["appkey"],
                 account=self.account,
-                password=self.password or "",
+                password="",
                 appid=app["appid"],
                 api_url=app["apiurl"],
                 sign_key=app["signkey"],
@@ -155,13 +146,8 @@ class MideaDehumidifierClient:
                 pushtoken=self.push_token,
                 device_id=self.device_id,
             )
-            if self.password is None:
-                cloud.use_credentials(self.credentials)
+            cloud.use_credentials(self.credentials)
             cloud.authenticate()
-            if self.password is not None:
-                self.credentials = password_credentials(self.password)
-                self.password = None
-                cloud.use_credentials(self.credentials)
             self._cloud = cloud
         return self._cloud
 
@@ -174,9 +160,6 @@ class MideaDehumidifierClient:
         with self._lock:
             try:
                 return func(self._connect())
-            except MideaApiError:
-                self._cloud = None
-                raise
             except (AuthenticationError, CloudAuthenticationError) as err:
                 self._cloud = None
                 raise MideaApiAuthError(str(err)) from err
