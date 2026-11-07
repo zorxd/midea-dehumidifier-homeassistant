@@ -7,6 +7,7 @@ import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.midea_cloud_dehumidifier.api import (
@@ -170,6 +171,9 @@ async def test_entities_show_state(hass: HomeAssistant) -> None:
     assert hass.states.get("select.deshumidificateur_fan_speed").state == "low"
     assert hass.states.get("sensor.deshumidificateur_humidity").state == "52"
     assert hass.states.get("sensor.deshumidificateur_temperature").state == "14.0"
+    # Shown without decimals
+    temperature = er.async_get(hass).async_get("sensor.deshumidificateur_temperature")
+    assert temperature.options["sensor"]["suggested_display_precision"] == 0
     assert hass.states.get("sensor.deshumidificateur_water_level").state == "0"
     assert hass.states.get("binary_sensor.deshumidificateur_tank_full").state == "off"
     assert (

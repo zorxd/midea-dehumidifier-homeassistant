@@ -45,6 +45,8 @@ SENSORS: tuple[MideaSensorDescription, ...] = (
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        # The Cube reports whole degrees; the value keeps any decimals it sends
+        suggested_display_precision=0,
         value_fn=lambda data: data.get("current_temperature"),
     ),
     MideaSensorDescription(
