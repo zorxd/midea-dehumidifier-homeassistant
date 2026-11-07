@@ -314,6 +314,39 @@ async def test_options_new_password_replaces_hashes(hass: HomeAssistant) -> None
     assert "password" not in entry.data
 
 
+async def test_options_new_password_reloads_with_same_interval(
+    hass: HomeAssistant,
+) -> None:
+    """A new password takes effect even when the scan interval is unchanged."""
+    with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):
+        entry = await _setup(hass)
+    hass.config_entries.async_update_entry(entry, options={"scan_interval": 60})
+    await hass.async_block_till_done()
+
+    seen = []
+
+    def refresh(self):
+        seen.append(self.credentials)
+        return dict(STATE)
+
+    def list_dehumidifiers(self):
+        self.credentials = {**CREDENTIALS, "password_sha256": "newsha"}
+        self.password = None
+        return ONE_APPLIANCE
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    with patch(f"{CLIENT}.list_dehumidifiers", list_dehumidifiers), patch(
+        f"{CLIENT}.refresh", refresh
+    ):
+        await hass.config_entries.options.async_configure(
+            result["flow_id"], {"password": "new-secret", "scan_interval": 60}
+        )
+        await hass.async_block_till_done()
+
+    # Reloaded and logged in with the new hashes
+    assert seen and seen[-1]["password_sha256"] == "newsha"
+
+
 async def test_options_wrong_password_keeps_hashes(hass: HomeAssistant) -> None:
     """A rejected new password changes nothing."""
     with patch(f"{CLIENT}.refresh", return_value=dict(STATE)):

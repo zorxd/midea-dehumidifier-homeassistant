@@ -205,6 +205,9 @@ class MideaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
                     self.hass.config_entries.async_update_entry(
                         entry, data={**data, CONF_CREDENTIALS: client.credentials}
                     )
+                    # The flow only reloads when the options change, so a
+                    # new password alone would otherwise wait for a restart
+                    self.hass.config_entries.async_schedule_reload(entry.entry_id)
             if not errors:
                 return self.async_create_entry(
                     title="",
