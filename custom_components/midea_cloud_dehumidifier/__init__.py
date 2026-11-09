@@ -38,6 +38,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: MideaConfigEntry) -> boo
 
     coordinator = MideaDataUpdateCoordinator(
         hass=hass,
+        entry=entry,
         api=api,
         scan_interval=entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
         name=entry.title,
